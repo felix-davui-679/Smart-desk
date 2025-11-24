@@ -1,0 +1,85 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="container">
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-file-invoice"></i> Ticket Details
+      </div>
+      <div class="card-body">
+        <h1 class="mb-3">
+          <i class="fas fa-ticket-alt"></i> {{ ticket.title }}
+        </h1>
+        
+        <p class="text-muted mb-4">{{ ticket.description }}</p>
+        
+        <div class="d-flex gap-3 flex-wrap mb-4">
+          <div>
+            <small class="text-muted"><i class="fas fa-tag"></i> Category</small>
+            <p class="badge badge-primary">{{ ticket.category }}</p>
+          </div>
+          
+          <div>
+            <small class="text-muted"><i class="fas fa-bolt"></i> Priority</small>
+            <p class="badge {% if ticket.priority == 'Critical' %}badge-danger{% elif ticket.priority == 'High' %}badge-warning{% elif ticket.priority == 'Medium' %}badge-info{% else %}badge-success{% endif %}">
+              {{ ticket.priority }}
+            </p>
+          </div>
+          
+          <div>
+            <small class="text-muted"><i class="fas fa-chart-pie"></i> Confidence</small>
+            <p class="confidence-{% if (ticket.confidence or 0) > 0.75 %}high{% elif (ticket.confidence or 0) > 0.5 %}medium{% else %}low{% endif %}">
+              {{ '%.0f'|format((ticket.confidence or 0) * 100) }}%
+            </p>
+          </div>
+          
+          <div>
+            <small class="text-muted"><i class="fas fa-calendar-alt"></i> Created</small>
+            <p>{{ ticket.created_at.strftime('%Y-%m-%d %H:%M') }}</p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-history"></i> Correction History
+      </div>
+      <div class="card-body">
+        {% if corrections %}
+          {% for c in corrections %}
+            <div class="list-group-item mb-3 correction-item">
+              <div class="d-flex justify-content-between mb-2">
+                <strong><i class="fas fa-user-edit"></i> {{ c.corrected_by or 'System' }}</strong>
+                <small class="text-muted">{{ c.corrected_at.strftime('%Y-%m-%d %H:%M') }}</small>
+              </div>
+              
+              <div class="mb-2">
+                <div><small class="text-muted">Category:</small> <em>{{ c.old_category }}</em> <i class="fas fa-arrow-right"></i> <strong>{{ c.new_category }}</strong></div>
+                <div><small class="text-muted">Priority:</small> <em>{{ c.old_priority }}</em> <i class="fas fa-arrow-right"></i> <strong>{{ c.new_priority }}</strong></div>
+              </div>
+              
+              {% if c.notes %}
+                <div class="alert alert-info alert-compact">
+                  <i class="fas fa-sticky-note"></i> {{ c.notes }}
+                </div>
+              {% endif %}
+            </div>
+          {% endfor %}
+        {% else %}
+          <div class="alert alert-info">
+            <i class="fas fa-info-circle"></i> No corrections recorded yet.
+          </div>
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="d-flex gap-2">
+      <a class="btn btn-primary" href="/admin">
+        <i class="fas fa-cog"></i> Back to Admin
+      </a>
+      <a class="btn btn-outline-secondary" href="/tickets">
+        <i class="fas fa-list"></i> View All Tickets
+      </a>
+    </div>
+  </div>
+{% endblock %}

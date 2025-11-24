@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="container">
+    <div class="login-container">
+      <div class="card login-card">
+        <div class="card-header">
+          <i class="fas fa-lock"></i> Admin Login
+        </div>
+        <div class="card-body">
+          {% if request.args.get('error') %}
+            <div class="alert alert-danger alert-dismissible fade show" role="alert">
+              <i class="fas fa-exclamation-circle"></i> Invalid password. Please try again.
+              <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+            </div>
+          {% endif %}
+          
+          <form method="post">
+            <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+            
+            <div class="mb-4">
+              <label class="form-label">
+                <i class="fas fa-key"></i> Password
+              </label>
+              <input type="password" name="password" class="form-control" placeholder="Enter admin password" required autofocus>
+              <small class="form-text text-muted">Only administrators have access to this section</small>
+            </div>
+            
+            <button class="btn btn-primary w-100" type="submit">
+              <i class="fas fa-sign-in-alt"></i> Login
+            </button>
+          </form>
+          
+          <div class="text-center-sm">
+            <a href="/" class="btn btn-outline-secondary btn-sm">
+              <i class="fas fa-arrow-left"></i> Back to Home
+            </a>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+{% endblock %}

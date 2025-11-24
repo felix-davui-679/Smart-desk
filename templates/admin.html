@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="container">
+    <h1><i class="fas fa-cog"></i> Admin Dashboard</h1>
+    <div class="mb-3">
+      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('list_fixed_issues') }}">
+        <i class="fas fa-archive"></i> View Fixed Issues
+      </a>
+    </div>
+    
+    <div class="card mb-4">
+      <div class="card-header">
+        <i class="fas fa-chart-bar"></i> Statistics
+      </div>
+      <div class="card-body">
+        <div class="grid-2">
+          <div>
+            <small class="text-muted"><i class="fas fa-inbox"></i> Total Tickets</small>
+            <h3 class="mb-0">{{ tickets|length }}</h3>
+          </div>
+          <div>
+            <small class="text-muted"><i class="fas fa-clock"></i> Recent (Today)</small>
+            <h3 class="mb-0">{{ recent_count }}</h3>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    {% if tickets %}
+      <div class="card">
+        <div class="card-header">
+          <i class="fas fa-list-ul"></i> Ticket Queue
+        </div>
+        <div class="card-body">
+          <div class="list-group">
+            {% for t in tickets %}
+              <div class="list-group-item d-flex justify-content-between align-items-start">
+                <div class="flex-grow-1">
+                  <h5 class="mb-2">
+                    <i class="fas fa-ticket-alt"></i> {{ t.title }}
+                  </h5>
+                  <p class="mb-2 text-muted">{{ t.description[:150] }}{% if t.description|length > 150 %}...{% endif %}</p>
+                  
+                  <div class="d-flex gap-2 flex-wrap">
+                    <span class="badge badge-primary">
+                      <i class="fas fa-tag"></i> {{ t.category }}
+                    </span>
+                    
+                    {% if t.priority == 'Critical' %}
+                      <span class="badge badge-danger">
+                        <i class="fas fa-exclamation-triangle"></i> {{ t.priority }}
+                      </span>
+                    {% elif t.priority == 'High' %}
+                      <span class="badge badge-warning">
+                        <i class="fas fa-arrow-up"></i> {{ t.priority }}
+                      </span>
+                    {% elif t.priority == 'Medium' %}
+                      <span class="badge badge-info">
+                        <i class="fas fa-minus"></i> {{ t.priority }}
+                      </span>
+                    {% else %}
+                      <span class="badge badge-success">
+                        <i class="fas fa-arrow-down"></i> {{ t.priority }}
+                      </span>
+                    {% endif %}
+                    
+                    <small class="text-muted">
+                      <i class="fas fa-calendar-alt"></i> {{ t.created_at.strftime('%Y-%m-%d %H:%M') }}
+                    </small>
+                  </div>
+                </div>
+                
+                <div class="text-end ms-3">
+                  <a class="btn btn-sm btn-primary mb-2" href="/admin/ticket/{{ t.id }}/edit">
+                    <i class="fas fa-edit"></i> Correct
+                  </a>
+                  <a class="btn btn-sm btn-outline-secondary mb-2" href="/ticket/{{ t.id }}">
+                    <i class="fas fa-eye"></i> Details
+                  </a>
+
+                  <a class="btn btn-sm btn-success" href="{{ url_for('confirm_complete', ticket_id=t.id) }}" title="Mark as fixed">
+                    <i class="fas fa-check-circle"></i> Mark Fixed
+                  </a>
+                </div>
+              </div>
+            {% endfor %}
+          </div>
+        </div>
+      </div>
+    {% else %}
+      <div class="alert alert-info">
+        <i class="fas fa-info-circle"></i> No tickets to review yet. Tickets will appear here once users submit them.
+      </div>
+    {% endif %}
+  </div>
+{% endblock %}

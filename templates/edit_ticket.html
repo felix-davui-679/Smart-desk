@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+{% block content %}
+  <div class="container">
+    <h1><i class="fas fa-edit"></i> Correct Ticket Classification</h1>
+    
+    <div class="card">
+      <div class="card-header">
+        <i class="fas fa-pencil-alt"></i> Ticket #{{ ticket.id }}: {{ ticket.title }}
+      </div>
+      <div class="card-body">
+        <form method="post">
+          <input type="hidden" name="csrf_token" value="{{ csrf_token() }}"/>
+          
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">
+                  <i class="fas fa-heading"></i> Title
+                </label>
+                <input class="form-control" name="title" value="{{ ticket.title }}" disabled title="Ticket Title">
+                <small class="form-text text-muted">Original ticket title (read-only)</small>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">
+                  <i class="fas fa-chart-pie"></i> Original Confidence
+                </label>
+                <div class="alert alert-info mb-0">
+                  {{ '%.0f'|format((ticket.confidence or 0) * 100) }}%
+                </div>
+              </div>
+            </div>
+          </div>
+          
+          <div class="mb-3">
+            <label class="form-label">
+              <i class="fas fa-file-alt"></i> Description
+            </label>
+            <textarea class="form-control" name="description" rows="5" disabled title="Ticket Description">{{ ticket.description }}</textarea>
+            <small class="form-text text-muted">Original ticket description (read-only)</small>
+          </div>
+          
+          <div class="row mb-4 p-3 form-section">
+            <h5 class="mb-3"><i class="fas fa-sync-alt"></i> Update Classification</h5>
+            
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">
+                  <i class="fas fa-tag"></i> Category
+                </label>
+                <input class="form-control" name="category" value="{{ ticket.category }}" placeholder="e.g., Hardware, Networking, Software" title="Category">
+              </div>
+            </div>
+            
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label for="priority">
+                  <i class="fas fa-bolt"></i> Priority
+                </label>
+                <select id="priority" class="form-select" name="priority" title="Priority">
+                  <option {% if ticket.priority=='Low' %}selected{% endif %}>Low</option>
+                  <option {% if ticket.priority=='Medium' %}selected{% endif %}>Medium</option>
+                  <option {% if ticket.priority=='High' %}selected{% endif %}>High</option>
+                  <option {% if ticket.priority=='Critical' %}selected{% endif %}>Critical</option>
+                </select>
+              </div>
+            </div>
+          </div>
+          
+          <div class="row mb-4">
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">
+                  <i class="fas fa-user"></i> Corrected By
+                </label>
+                <input class="form-control" name="corrected_by" placeholder="Your name or ID" required>
+              </div>
+            </div>
+            <div class="col-md-6">
+              <div class="mb-3">
+                <label class="form-label">
+                  <i class="fas fa-sticky-note"></i> Notes
+                </label>
+                <input class="form-control" name="notes" placeholder="Optional: explain why you corrected this classification">
+              </div>
+            </div>
+          </div>
+          
+          <div class="d-flex gap-2">
+            <button class="btn btn-primary" type="submit">
+              <i class="fas fa-check"></i> Save Correction
+            </button>
+            <a class="btn btn-outline-secondary" href="/admin">
+              <i class="fas fa-times"></i> Cancel
+            </a>
+            <a class="btn btn-outline-info" href="/ticket/{{ ticket.id }}">
+              <i class="fas fa-eye"></i> View Details
+            </a>
+          </div>
+        </form>
+      </div>
+    </div>
+  </div>
+{% endblock %}
