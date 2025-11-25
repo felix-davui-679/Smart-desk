@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 # VirtualFlex Smart AI desk system — Flask + OpenAI demo
 
 This is a minimal Flask prototype for an AI-driven help desk ticket triage system. It accepts user-submitted tickets, calls the OpenAI API to classify category and priority, and stores tickets in SQLite.
@@ -57,3 +58,6 @@ Docker
 ```powershell
 docker-compose up --build
 ```
+=======
+# Smart-desk
+>>>>>>> 14d5e57d97019cb81c33d1c0f2685435e5b6c4ab
