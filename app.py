@@ -3,11 +3,14 @@ import json
 import secrets
 from datetime import datetime, timedelta, timezone
 from functools import wraps
+from urllib.parse import urlparse
 from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
 from dotenv import load_dotenv
 from flask_wtf.csrf import CSRFProtect
 from flask_wtf.csrf import CSRFError
+from flask_limiter import Limiter
+from flask_limiter.util import get_remote_address
 import io
 import csv
 import logging
@@ -18,6 +21,27 @@ from models import db, Ticket, TicketCorrection, FixedIssue, utcnow
 from classifier import classify_text
 
 csrf = CSRFProtect()
+limiter = Limiter(key_func=get_remote_address)
+
+
+def _safe_next(target):
+    """Return target only if it's a same-site relative path, else None.
+
+    Guards against open-redirects: rejects absolute URLs (with scheme and/or
+    netloc) and anything that isn't an in-app path.
+    """
+    if not target:
+        return None
+    u = urlparse(target)
+    return target if (not u.scheme and not u.netloc and target.startswith('/')) else None
+
+
+def _csv_safe(v):
+    """Neutralize CSV formula injection by prefixing risky values with a quote."""
+    s = '' if v is None else str(v)
+    if s and s[0] in ('=', '+', '-', '@', '\t', '\r'):
+        return "'" + s
+    return s
 
 
 def create_app():
@@ -44,10 +68,29 @@ def create_app():
     app.config['SESSION_COOKIE_SECURE'] = is_production
     # Disable CSRF in testing mode
     app.config['WTF_CSRF_ENABLED'] = os.environ.get('FLASK_ENV') != 'testing'
+    # Disable rate limiting during tests so the suite doesn't trip the limits.
+    app.config['RATELIMIT_ENABLED'] = os.environ.get('FLASK_ENV') != 'testing'
     # Session lifetime for admin login
     app.permanent_session_lifetime = timedelta(hours=int(os.environ.get('SESSION_HOURS', '1')))
+    # In development, don't let the browser cache static assets (CSS/JS/SVG)
+    # so design changes show up immediately on refresh.
+    if not is_production:
+        app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+    # Expose a cache-busting version string to templates based on the CSS
+    # file's last-modified time, so updated styles bypass the browser cache.
+    @app.context_processor
+    def inject_asset_version():
+        try:
+            css_path = os.path.join(app.static_folder, 'style.css')
+            version = str(int(os.path.getmtime(css_path)))
+        except OSError:
+            version = '0'
+        return {'asset_version': version}
+
     db.init_app(app)
     csrf.init_app(app)
+    limiter.init_app(app)
     # Configure basic logging for server-side events
     app.logger.setLevel(logging.INFO)
 
@@ -67,12 +110,17 @@ def create_app():
         return redirect(url_for('submit_ticket'))
 
     @app.route('/submit', methods=['GET', 'POST'])
+    @limiter.limit("10 per hour", methods=["POST"])
     def submit_ticket():
         if request.method == 'POST':
-            title = request.form.get('title', '').strip()
-            description = request.form.get('description', '').strip()
+            title = request.form.get('title', '').strip()[:255]
+            description = request.form.get('description', '').strip()[:5000]
             if not description:
                 flash('Please provide a description of the issue', 'warning')
+                return redirect(url_for('submit_ticket'))
+            # Hard-cap input size to limit classifier cost / DoS.
+            if not (1 <= len(description) <= 5000):
+                flash('Description must be between 1 and 5000 characters', 'warning')
                 return redirect(url_for('submit_ticket'))
 
             # Call classifier (OpenAI) to predict category & priority
@@ -242,7 +290,10 @@ def create_app():
         writer = csv.writer(output)
         writer.writerow(['id', 'ticket_id', 'title', 'category', 'priority', 'fixed_by', 'fixed_at', 'notes'])
         for f in fixed_issues:
-            writer.writerow([f.id, f.ticket_id, f.title, f.category, f.priority, f.fixed_by, f.fixed_at.isoformat(), (f.notes or '')])
+            writer.writerow([_csv_safe(v) for v in [
+                f.id, f.ticket_id, f.title, f.category, f.priority,
+                f.fixed_by, f.fixed_at.isoformat(), (f.notes or ''),
+            ]])
         resp = make_response(output.getvalue())
         resp.headers['Content-Type'] = 'text/csv'
         resp.headers['Content-Disposition'] = 'attachment; filename=fixed_issues.csv'
@@ -251,10 +302,17 @@ def create_app():
     @app.route('/ticket/<int:ticket_id>')
     def ticket_detail(ticket_id):
         ticket = Ticket.query.get_or_404(ticket_id)
-        corrections = TicketCorrection.query.filter_by(ticket_id=ticket.id).order_by(TicketCorrection.corrected_at.desc()).all()
+        # The ticket queue (title/description/category/priority/confidence) is
+        # public by design. Correction history exposes staff identity and
+        # internal notes, so only fetch it for logged-in admins.
+        if session.get('admin_logged_in'):
+            corrections = TicketCorrection.query.filter_by(ticket_id=ticket.id).order_by(TicketCorrection.corrected_at.desc()).all()
+        else:
+            corrections = []
         return render_template('ticket_detail.html', ticket=ticket, corrections=corrections)
 
     @app.route('/admin/login', methods=['GET', 'POST'])
+    @limiter.limit("5 per minute; 30 per hour", methods=["POST"])
     def admin_login():
         if request.method == 'POST':
             password = request.form.get('password')
@@ -263,7 +321,7 @@ def create_app():
                 session.permanent = True
                 session['admin_logged_in'] = True
                 flash('Logged in as admin.', 'success')
-                next_url = request.args.get('next') or url_for('admin_index')
+                next_url = _safe_next(request.args.get('next')) or url_for('admin_index')
                 return redirect(next_url)
             else:
                 # Log the failed attempt for auditing
@@ -283,15 +341,34 @@ def create_app():
         except Exception:
             pass
         flash('Form submission failed due to a security token issue. Please refresh the page and try again.', 'danger')
-        # If the request referenced a 'next' parameter, keep it on redirect
-        next_url = request.args.get('next') or request.referrer or url_for('index')
+        # If the request referenced a 'next' parameter, keep it on redirect, but
+        # only when it's a safe same-site path (avoid open-redirects).
+        next_url = _safe_next(request.args.get('next')) or _safe_next(request.referrer) or url_for('index')
         return redirect(next_url)
 
-    @app.route('/admin/logout')
+    @app.route('/admin/logout', methods=['POST'])
     def admin_logout():
-        session.pop('admin_logged_in', None)
+        session.clear()
         flash('Logged out', 'success')
         return redirect(url_for('index'))
+
+    @app.after_request
+    def set_security_headers(resp):
+        resp.headers['X-Frame-Options'] = 'DENY'
+        resp.headers['X-Content-Type-Options'] = 'nosniff'
+        resp.headers['Referrer-Policy'] = 'strict-origin-when-cross-origin'
+        resp.headers['Content-Security-Policy'] = (
+            "default-src 'self'; "
+            "img-src 'self' data:; "
+            "style-src 'self' 'unsafe-inline' https://cdn.jsdelivr.net "
+            "https://cdnjs.cloudflare.com https://fonts.googleapis.com; "
+            "font-src https://fonts.gstatic.com https://cdnjs.cloudflare.com; "
+            "script-src 'self' https://cdn.jsdelivr.net"
+        )
+        # Only advertise HSTS when serving over HTTPS (production).
+        if app.config.get('SESSION_COOKIE_SECURE'):
+            resp.headers['Strict-Transport-Security'] = 'max-age=31536000; includeSubDomains'
+        return resp
 
     return app
 
@@ -301,4 +378,7 @@ if __name__ == '__main__':
     # Only enable the Werkzeug debug server outside of production. Exposing the
     # debugger in production is a remote-code-execution risk.
     debug = os.environ.get('FLASK_ENV') != 'production'
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=debug)
+    # Bind to loopback by default; exposing on all interfaces must be an
+    # explicit opt-in via the HOST env var.
+    host = os.environ.get('HOST', '127.0.0.1')
+    app.run(host=host, port=int(os.environ.get('PORT', 5000)), debug=debug)

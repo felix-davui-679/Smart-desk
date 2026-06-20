@@ -37,6 +37,10 @@
     </div>
   </div>
 
+  {# Ticket title/description/category/priority/confidence above remain public
+     by design. Correction history exposes staff identity and internal notes,
+     so it is only rendered for logged-in admins. #}
+  {% if session.get('admin_logged_in') %}
   <div class="card mb-4">
     <div class="card-header">
       <i class="fas fa-clock-rotate-left"></i> Correction history
@@ -69,6 +73,7 @@
       {% endif %}
     </div>
   </div>
+  {% endif %}
 
   <div class="d-flex gap-2 flex-wrap">
     <a class="btn btn-outline-secondary" href="/tickets">
