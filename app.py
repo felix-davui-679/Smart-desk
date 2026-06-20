@@ -46,6 +46,22 @@ def create_app():
     app.config['WTF_CSRF_ENABLED'] = os.environ.get('FLASK_ENV') != 'testing'
     # Session lifetime for admin login
     app.permanent_session_lifetime = timedelta(hours=int(os.environ.get('SESSION_HOURS', '1')))
+    # In development, don't let the browser cache static assets (CSS/JS/SVG)
+    # so design changes show up immediately on refresh.
+    if not is_production:
+        app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+
+    # Expose a cache-busting version string to templates based on the CSS
+    # file's last-modified time, so updated styles bypass the browser cache.
+    @app.context_processor
+    def inject_asset_version():
+        try:
+            css_path = os.path.join(app.static_folder, 'style.css')
+            version = str(int(os.path.getmtime(css_path)))
+        except OSError:
+            version = '0'
+        return {'asset_version': version}
+
     db.init_app(app)
     csrf.init_app(app)
     # Configure basic logging for server-side events
