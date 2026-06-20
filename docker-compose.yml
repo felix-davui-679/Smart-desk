@@ -5,8 +5,18 @@ services:
     ports:
       - "5000:5000"
     environment:
+      - FLASK_ENV=production
       - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - OPENAI_MODEL=${OPENAI_MODEL:-gpt-4o-mini}
+      - FLASK_SECRET=${FLASK_SECRET:?FLASK_SECRET must be set}
+      - ADMIN_PASSWORD_HASH=${ADMIN_PASSWORD_HASH}
       - ADMIN_PASSWORD=${ADMIN_PASSWORD}
-      - FLASK_SECRET=${FLASK_SECRET}
+      - DATABASE_URL=${DATABASE_URL:-sqlite:///tickets.db}
+      - SESSION_HOURS=${SESSION_HOURS:-1}
+    # Persist the SQLite database across container restarts without
+    # bind-mounting the source tree into the production image.
     volumes:
-      - .:/app
+      - db-data:/app/instance
+
+volumes:
+  db-data:

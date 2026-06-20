@@ -1,7 +1,16 @@
 from flask_sqlalchemy import SQLAlchemy
-from datetime import datetime
+from datetime import datetime, timezone
 
 db = SQLAlchemy()
+
+
+def utcnow():
+    """Naive UTC timestamp.
+
+    Replaces the deprecated ``datetime.utcnow()`` while keeping the naive
+    (tzinfo-free) semantics the schema and existing comparisons rely on.
+    """
+    return datetime.now(timezone.utc).replace(tzinfo=None)
 
 
 class Ticket(db.Model):
@@ -13,8 +22,8 @@ class Ticket(db.Model):
     priority = db.Column(db.String(50), nullable=True)
     confidence = db.Column(db.Float, nullable=True)
     status = db.Column(db.String(50), nullable=False, default='Open')
-    created_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
-    updated_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow, onupdate=datetime.utcnow)
+    created_at = db.Column(db.DateTime, nullable=False, default=utcnow)
+    updated_at = db.Column(db.DateTime, nullable=False, default=utcnow, onupdate=utcnow)
 
     corrections = db.relationship('TicketCorrection', backref='ticket', lazy=True)
 
@@ -31,7 +40,7 @@ class TicketCorrection(db.Model):
     old_priority = db.Column(db.String(50), nullable=True)
     new_priority = db.Column(db.String(50), nullable=True)
     corrected_by = db.Column(db.String(100), nullable=True)
-    corrected_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    corrected_at = db.Column(db.DateTime, nullable=False, default=utcnow)
     notes = db.Column(db.Text, nullable=True)
 
     def __repr__(self):
@@ -49,7 +58,7 @@ class FixedIssue(db.Model):
     confidence = db.Column(db.Float, nullable=True)
     status = db.Column(db.String(50), nullable=False, default='Fixed')
     fixed_by = db.Column(db.String(100), nullable=True)
-    fixed_at = db.Column(db.DateTime, nullable=False, default=datetime.utcnow)
+    fixed_at = db.Column(db.DateTime, nullable=False, default=utcnow)
     notes = db.Column(db.Text, nullable=True)
 
     def __repr__(self):

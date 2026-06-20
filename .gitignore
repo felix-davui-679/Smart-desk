@@ -51,6 +51,7 @@ pip-log.txt
 # Environments
 .env
 .env.*
+!.env.example
 env/
 venv/
 
