@@ -28,7 +28,7 @@
           {% if session.get('admin_logged_in') %}
             <li class="nav-item">
               <form action="/admin/logout" method="post" style="margin:0;display:inline-flex;">
-                {{ csrf_token() }}
+                <input type="hidden" name="csrf_token" value="{{ csrf_token() }}">
                 <button type="submit" class="nav-link logout-link" style="background:transparent;font:inherit;cursor:pointer;"><i class="fas fa-arrow-right-from-bracket"></i> Log out</button>
               </form>
             </li>
