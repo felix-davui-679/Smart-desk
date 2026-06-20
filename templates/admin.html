@@ -1,96 +1,83 @@
 {% extends "base.html" %}
 {% block content %}
-  <div class="container">
-    <h1><i class="fas fa-cog"></i> Admin Dashboard</h1>
-    <div class="mb-3">
-      <a class="btn btn-sm btn-outline-primary" href="{{ url_for('list_fixed_issues') }}">
-        <i class="fas fa-archive"></i> View Fixed Issues
-      </a>
+  <div class="d-flex align-items-end justify-content-between gap-2 flex-wrap page-header">
+    <div>
+      <div class="eyebrow">Admin</div>
+      <h1 class="page-title">Admin dashboard</h1>
+      <p class="page-subtitle mb-0">Review the queue, correct misclassifications, and resolve tickets.</p>
     </div>
-    
-    <div class="card mb-4">
+    <a class="btn btn-outline-secondary" href="{{ url_for('list_fixed_issues') }}">
+      <i class="fas fa-box-archive"></i> Fixed issues
+    </a>
+  </div>
+
+  <div class="card mb-4">
+    <div class="card-header">
+      <i class="fas fa-chart-simple"></i> Statistics
+    </div>
+    <div class="card-body">
+      <div class="grid-2">
+        <div>
+          <small><i class="fas fa-inbox"></i> Total tickets</small>
+          <h3>{{ tickets|length }}</h3>
+        </div>
+        <div>
+          <small><i class="fas fa-clock"></i> Recent (today)</small>
+          <h3>{{ recent_count }}</h3>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  {% if tickets %}
+    <div class="card">
       <div class="card-header">
-        <i class="fas fa-chart-bar"></i> Statistics
+        <i class="fas fa-list-ul"></i> Ticket queue
       </div>
       <div class="card-body">
-        <div class="grid-2">
-          <div>
-            <small class="text-muted"><i class="fas fa-inbox"></i> Total Tickets</small>
-            <h3 class="mb-0">{{ tickets|length }}</h3>
-          </div>
-          <div>
-            <small class="text-muted"><i class="fas fa-clock"></i> Recent (Today)</small>
-            <h3 class="mb-0">{{ recent_count }}</h3>
-          </div>
-        </div>
-      </div>
-    </div>
+        <div class="list-group">
+          {% for t in tickets %}
+            <div class="list-group-item d-flex justify-content-between align-items-start gap-3" data-priority="{{ t.priority }}">
+              <div class="flex-grow-1">
+                <h5 class="mb-1">
+                  <i class="fas fa-ticket"></i> {{ t.title }}
+                </h5>
+                <p class="mb-2">{{ t.description[:150] }}{% if t.description|length > 150 %}…{% endif %}</p>
 
-    {% if tickets %}
-      <div class="card">
-        <div class="card-header">
-          <i class="fas fa-list-ul"></i> Ticket Queue
-        </div>
-        <div class="card-body">
-          <div class="list-group">
-            {% for t in tickets %}
-              <div class="list-group-item d-flex justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                  <h5 class="mb-2">
-                    <i class="fas fa-ticket-alt"></i> {{ t.title }}
-                  </h5>
-                  <p class="mb-2 text-muted">{{ t.description[:150] }}{% if t.description|length > 150 %}...{% endif %}</p>
-                  
-                  <div class="d-flex gap-2 flex-wrap">
-                    <span class="badge badge-primary">
-                      <i class="fas fa-tag"></i> {{ t.category }}
-                    </span>
-                    
-                    {% if t.priority == 'Critical' %}
-                      <span class="badge badge-danger">
-                        <i class="fas fa-exclamation-triangle"></i> {{ t.priority }}
-                      </span>
-                    {% elif t.priority == 'High' %}
-                      <span class="badge badge-warning">
-                        <i class="fas fa-arrow-up"></i> {{ t.priority }}
-                      </span>
-                    {% elif t.priority == 'Medium' %}
-                      <span class="badge badge-info">
-                        <i class="fas fa-minus"></i> {{ t.priority }}
-                      </span>
-                    {% else %}
-                      <span class="badge badge-success">
-                        <i class="fas fa-arrow-down"></i> {{ t.priority }}
-                      </span>
-                    {% endif %}
-                    
-                    <small class="text-muted">
-                      <i class="fas fa-calendar-alt"></i> {{ t.created_at.strftime('%Y-%m-%d %H:%M') }}
-                    </small>
-                  </div>
-                </div>
-                
-                <div class="text-end ms-3">
-                  <a class="btn btn-sm btn-primary mb-2" href="/admin/ticket/{{ t.id }}/edit">
-                    <i class="fas fa-edit"></i> Correct
-                  </a>
-                  <a class="btn btn-sm btn-outline-secondary mb-2" href="/ticket/{{ t.id }}">
-                    <i class="fas fa-eye"></i> Details
-                  </a>
-
-                  <a class="btn btn-sm btn-success" href="{{ url_for('confirm_complete', ticket_id=t.id) }}" title="Mark as fixed">
-                    <i class="fas fa-check-circle"></i> Mark Fixed
-                  </a>
+                <div class="d-flex gap-2 flex-wrap align-items-center">
+                  <span class="badge priority-badge {% if t.priority == 'Critical' %}badge-danger{% elif t.priority == 'High' %}badge-warning{% elif t.priority == 'Medium' %}badge-info{% else %}badge-success{% endif %}">{{ t.priority }}</span>
+                  <span class="badge badge-neutral">{{ t.category }}</span>
+                  <small><i class="fas fa-calendar"></i> {{ t.created_at.strftime('%Y-%m-%d %H:%M') }}</small>
                 </div>
               </div>
-            {% endfor %}
-          </div>
+
+              <div class="d-flex flex-column gap-2 align-items-stretch text-end">
+                <a class="btn btn-sm btn-primary" href="/admin/ticket/{{ t.id }}/edit">
+                  <i class="fas fa-pen"></i> Correct
+                </a>
+                <a class="btn btn-sm btn-outline-secondary" href="/ticket/{{ t.id }}">
+                  <i class="fas fa-eye"></i> Details
+                </a>
+                <a class="btn btn-sm btn-success" href="{{ url_for('confirm_complete', ticket_id=t.id) }}" title="Mark as fixed">
+                  <i class="fas fa-circle-check"></i> Mark fixed
+                </a>
+              </div>
+            </div>
+          {% endfor %}
         </div>
+
+        {% if pagination and pagination.pages > 1 %}
+          <div class="d-flex justify-content-center gap-2 mt-4">
+            {% if pagination.has_prev %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ pagination.prev_num }}"><i class="fas fa-arrow-left"></i> Previous</a>{% endif %}
+            <span class="btn btn-sm btn-ghost disabled">Page {{ pagination.page }} of {{ pagination.pages }}</span>
+            {% if pagination.has_next %}<a class="btn btn-sm btn-outline-secondary" href="?page={{ pagination.next_num }}">Next <i class="fas fa-arrow-right"></i></a>{% endif %}
+          </div>
+        {% endif %}
       </div>
-    {% else %}
-      <div class="alert alert-info">
-        <i class="fas fa-info-circle"></i> No tickets to review yet. Tickets will appear here once users submit them.
-      </div>
-    {% endif %}
-  </div>
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      <i class="fas fa-circle-info"></i> No tickets to review yet. Tickets appear here once users submit them.
+    </div>
+  {% endif %}
 {% endblock %}
