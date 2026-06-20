@@ -1,66 +1,56 @@
 {% extends "base.html" %}
 {% block content %}
-  <div class="container">
-    <h1><i class="fas fa-archive"></i> Fixed Issues Archive</h1>
+  <div class="page-header">
+    <div class="eyebrow">Archive</div>
+    <h1 class="page-title">Fixed issues</h1>
+    <p class="page-subtitle">Tickets that were marked as fixed, kept for reference and reporting.</p>
+  </div>
 
-    <form method="get" class="row g-2 mb-3">
-      <div class="col-auto">
-        <input class="form-control" name="category" placeholder="Category" value="{{ request.args.get('category','') }}">
-      </div>
-      <div class="col-auto">
-        <input class="form-control" name="priority" placeholder="Priority" value="{{ request.args.get('priority','') }}">
-      </div>
-      <div class="col-auto">
-        <input class="form-control" name="fixed_by" placeholder="Fixed by" value="{{ request.args.get('fixed_by','') }}">
-      </div>
-      <div class="col-auto">
-        <button class="btn btn-primary" type="submit">Filter</button>
-      </div>
-      <div class="col-auto">
-        <a class="btn btn-outline-secondary" href="{{ url_for('export_fixed_issues_csv') }}">Export CSV</a>
-      </div>
-    </form>
-
-    {% if fixed_issues %}
-      <div class="card">
-        <div class="card-header">
-          <i class="fas fa-list"></i> Fixed Issues
-        </div>
-        <div class="card-body">
-          <div class="list-group">
-            {% for f in fixed_issues %}
-              <div class="list-group-item d-flex justify-content-between align-items-start">
-                <div class="flex-grow-1">
-                  <h5 class="mb-2">{{ f.title }}</h5>
-                  <p class="mb-2 text-muted">{{ f.description[:200] }}{% if f.description|length > 200 %}...{% endif %}</p>
-
-                  <div class="d-flex gap-2 flex-wrap">
-                    <span class="badge badge-primary">{{ f.category }}</span>
-                    <span class="badge badge-secondary">{{ f.priority }}</span>
-                    <small class="text-muted">Fixed by {{ f.fixed_by or 'admin' }} at {{ f.fixed_at.strftime('%Y-%m-%d %H:%M') }}</small>
-                  </div>
-                </div>
-
-                <div class="text-end ms-3">
-                  {% if f.ticket_id %}
-                    <a class="btn btn-sm btn-outline-secondary" href="/ticket/{{ f.ticket_id }}">
-                      <i class="fas fa-link"></i> Original
-                    </a>
-                  {% endif %}
-                </div>
-              </div>
-            {% endfor %}
-          </div>
-        </div>
-      </div>
-    {% else %}
-      <div class="alert alert-info">
-        No fixed issues yet. This archive will list tickets that were marked as fixed.
-      </div>
-    {% endif %}
-
-    <div class="mt-3">
-      <a class="btn btn-outline-secondary" href="{{ url_for('admin_index') }}">Back to Admin</a>
+  <form method="get" class="d-flex gap-2 flex-wrap align-items-end mb-4">
+    <div>
+      <label class="form-label" for="f-category">Category</label>
+      <input id="f-category" class="form-control" name="category" placeholder="Any" value="{{ request.args.get('category','') }}">
     </div>
+    <div>
+      <label class="form-label" for="f-priority">Priority</label>
+      <input id="f-priority" class="form-control" name="priority" placeholder="Any" value="{{ request.args.get('priority','') }}">
+    </div>
+    <div>
+      <label class="form-label" for="f-fixedby">Fixed by</label>
+      <input id="f-fixedby" class="form-control" name="fixed_by" placeholder="Anyone" value="{{ request.args.get('fixed_by','') }}">
+    </div>
+    <button class="btn btn-primary" type="submit"><i class="fas fa-filter"></i> Filter</button>
+    <a class="btn btn-outline-secondary" href="{{ url_for('export_fixed_issues_csv') }}"><i class="fas fa-file-csv"></i> Export CSV</a>
+  </form>
+
+  {% if fixed_issues %}
+    <div class="list-group">
+      {% for f in fixed_issues %}
+        <div class="list-group-item d-flex justify-content-between align-items-start gap-3" data-priority="{{ f.priority }}">
+          <div class="flex-grow-1">
+            <h5 class="mb-1">{{ f.title }}</h5>
+            <p class="mb-2">{{ f.description[:180] }}{% if f.description|length > 180 %}…{% endif %}</p>
+            <div class="d-flex gap-2 flex-wrap align-items-center">
+              <span class="badge priority-badge {% if f.priority == 'Critical' %}badge-danger{% elif f.priority == 'High' %}badge-warning{% elif f.priority == 'Medium' %}badge-info{% else %}badge-success{% endif %}">{{ f.priority }}</span>
+              <span class="badge badge-neutral">{{ f.category }}</span>
+              <small><i class="fas fa-circle-check"></i> Fixed by {{ f.fixed_by or 'admin' }} · {{ f.fixed_at.strftime('%Y-%m-%d %H:%M') }}</small>
+            </div>
+          </div>
+          {% if f.ticket_id %}
+            <a class="btn btn-sm btn-outline-secondary" href="/ticket/{{ f.ticket_id }}">
+              <i class="fas fa-link"></i> Original
+            </a>
+          {% endif %}
+        </div>
+      {% endfor %}
+    </div>
+  {% else %}
+    <div class="alert alert-info">
+      <i class="fas fa-circle-info"></i> No fixed issues yet. This archive lists tickets that were marked as fixed.
+    </div>
+  {% endif %}
+
+  <div class="mt-4">
+    <a class="btn btn-outline-secondary" href="{{ url_for('admin_index') }}"><i class="fas fa-arrow-left"></i> Back to admin</a>
   </div>
 {% endblock %}
