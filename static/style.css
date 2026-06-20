@@ -122,6 +122,8 @@ main.container, .page > .container { flex: 1; }
 .navbar > .container {
   height: 58px;
   display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
   align-items: center;
   justify-content: space-between;
 }
@@ -134,12 +136,23 @@ main.container, .page > .container { flex: 1; }
   font-size: 1rem;
   color: var(--tk-text-heading) !important;
   letter-spacing: -0.01em;
+  white-space: nowrap;
 }
 
 .brand-logo { width: 28px; height: 28px; display: inline-block; }
 .brand-text { font-weight: 700; font-size: 1rem; }
 
-.navbar-nav { display: flex; align-items: center; gap: 1.5rem; }
+.navbar-nav {
+  display: flex;
+  flex-direction: row;
+  flex-wrap: nowrap;
+  align-items: center;
+  gap: 1.5rem;
+  list-style: none;
+  margin: 0;
+  padding-left: 0;
+}
+.navbar-nav .nav-item { display: flex; align-items: center; }
 
 .navbar-nav .nav-link {
   color: var(--tk-text-secondary) !important;
@@ -152,6 +165,7 @@ main.container, .page > .container { flex: 1; }
   padding: 0 2px !important;
   margin: 0;
   border-bottom: 2px solid transparent;
+  white-space: nowrap;
   transition: color var(--tk-transition-fast);
 }
 
