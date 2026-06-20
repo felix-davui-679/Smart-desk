@@ -1,6 +1,7 @@
 import os
 import json
-from datetime import datetime, timedelta
+import secrets
+from datetime import datetime, timedelta, timezone
 from functools import wraps
 from flask import Flask, render_template, request, redirect, url_for, flash, session, make_response
 from werkzeug.security import generate_password_hash, check_password_hash
@@ -13,7 +14,7 @@ import logging
 
 load_dotenv()
 
-from models import db, Ticket, TicketCorrection, FixedIssue
+from models import db, Ticket, TicketCorrection, FixedIssue, utcnow
 from classifier import classify_text
 
 csrf = CSRFProtect()
@@ -23,7 +24,24 @@ def create_app():
     app = Flask(__name__)
     app.config['SQLALCHEMY_DATABASE_URI'] = os.environ.get('DATABASE_URL', 'sqlite:///tickets.db')
     app.config['SQLALCHEMY_TRACK_MODIFICATIONS'] = False
-    app.config['SECRET_KEY'] = os.environ.get('FLASK_SECRET', 'dev-secret')
+
+    # Session signing key. Require an explicit secret in production; in
+    # development fall back to a random per-process key so sessions still work
+    # without a hard-coded, guessable default.
+    is_production = os.environ.get('FLASK_ENV') == 'production'
+    flask_secret = os.environ.get('FLASK_SECRET')
+    if not flask_secret:
+        if is_production:
+            raise RuntimeError(
+                'FLASK_SECRET must be set in production. Generate one with '
+                '`python -c "import secrets; print(secrets.token_hex(32))"`.'
+            )
+        flask_secret = secrets.token_hex(32)
+    app.config['SECRET_KEY'] = flask_secret
+    # Harden the session cookie.
+    app.config['SESSION_COOKIE_HTTPONLY'] = True
+    app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+    app.config['SESSION_COOKIE_SECURE'] = is_production
     # Disable CSRF in testing mode
     app.config['WTF_CSRF_ENABLED'] = os.environ.get('FLASK_ENV') != 'testing'
     # Session lifetime for admin login
@@ -70,8 +88,8 @@ def create_app():
                 priority=priority,
                 confidence=confidence,
                 status='Open',
-                created_at=datetime.utcnow(),
-                updated_at=datetime.utcnow(),
+                created_at=utcnow(),
+                updated_at=utcnow(),
             )
             db.session.add(ticket)
             db.session.commit()
@@ -113,7 +131,7 @@ def create_app():
         pagination = q.paginate(page=page, per_page=per_page, error_out=False)
         tickets = pagination.items
         # compute recent (today) count server-side using a simple query
-        today = datetime.utcnow().date()
+        today = utcnow().date()
         recent_count = Ticket.query.filter(db.func.date(Ticket.created_at) == today).count()
         return render_template('admin.html', tickets=tickets, recent_count=recent_count, pagination=pagination)
 
@@ -140,7 +158,7 @@ def create_app():
                 db.session.add(correction)
                 ticket.category = new_category
                 ticket.priority = new_priority
-                ticket.updated_at = datetime.utcnow()
+                ticket.updated_at = utcnow()
                 db.session.commit()
                 flash('Ticket updated and correction logged.', 'success')
             else:
@@ -174,7 +192,7 @@ def create_app():
         # Mark the original ticket as fixed/closed
         try:
             ticket.status = 'Fixed'
-            ticket.updated_at = datetime.utcnow()
+            ticket.updated_at = utcnow()
         except Exception:
             pass
 
@@ -280,4 +298,7 @@ def create_app():
 
 if __name__ == '__main__':
     app = create_app()
-    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=True)
+    # Only enable the Werkzeug debug server outside of production. Exposing the
+    # debugger in production is a remote-code-execution risk.
+    debug = os.environ.get('FLASK_ENV') != 'production'
+    app.run(host='0.0.0.0', port=int(os.environ.get('PORT', 5000)), debug=debug)
