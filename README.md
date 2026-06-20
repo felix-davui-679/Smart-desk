@@ -1,6 +1,8 @@
-# VirtualFlex Smart AI desk system — Flask + OpenAI demo
+# AI Ticketing System — Flask + OpenAI demo
 
 This is a minimal Flask prototype for an AI-driven help desk ticket triage system. It accepts user-submitted tickets, calls the OpenAI API to classify category and priority, and stores tickets in SQLite.
+
+The interface follows the **AI Ticketing design system**: a minimalist, professional red/black/white aesthetic where red is a focused accent (primary actions, active state, critical status) and neutrals carry the surfaces and hierarchy. Flat surfaces, hairline borders, quiet shadows, Inter for UI, and Font Awesome icons.
 
 ## Quickstart
 

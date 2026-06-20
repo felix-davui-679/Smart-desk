@@ -1,4 +1,4 @@
-# VirtualFlex Smart AI desk system - Complete Project Summary
+# AI Ticketing System - Complete Project Summary
 
 ## 🎯 Project Overview
 
@@ -397,7 +397,7 @@ This project demonstrates:
 
 ## 📝 License & Credits
 
-**Author**: VirtualFlex Development Team
+**Author**: AI Ticketing System maintainers
 **Built with**: Flask, OpenAI, Bootstrap, Font Awesome
 **Deployment Ready**: Yes
 **Production Suitable**: Yes (with config adjustments)

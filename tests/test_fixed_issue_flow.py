@@ -25,7 +25,7 @@ def test_complete_flow():
         # GET confirm page
         r = client.get(f'/admin/ticket/{tid}/complete-confirm')
         assert r.status_code == 200
-        assert 'Confirm Fix' in r.get_data(as_text=True)
+        assert 'Mark ticket fixed' in r.get_data(as_text=True)
 
         # POST complete
         r2 = client.post(f'/admin/ticket/{tid}/complete', data={'fixed_by': 'unittest', 'notes': 'fixed in test'}, follow_redirects=True)
